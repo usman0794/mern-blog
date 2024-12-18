@@ -1,6 +1,9 @@
 import express from "express";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
+
+// app.use('/static', express.static(path.join(__dirname, 'public')));
+
 import userRoutes from "./routes/user.route.js";
 import authRoutes from "./routes/auth.route.js";
 
