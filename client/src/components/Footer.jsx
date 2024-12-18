@@ -26,7 +26,7 @@ export default function FooterCom() {
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  Sahand's Blog
+                  TechCrunch Blog
                 </Footer.Link>
               </Footer.LinkGroup>
             </div>
