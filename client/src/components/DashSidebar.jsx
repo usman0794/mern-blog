@@ -14,7 +14,9 @@ export default function DashSidebar({ tab, setTab }) {
               icon={HiUser}
               label={"User"}
               labelColor="dark"
+              as="div"
               onClick={() => setTab("profile")} // Update tab state on click
+
             >
               Profile
             </Sidebar.Item>

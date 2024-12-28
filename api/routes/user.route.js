@@ -1,6 +1,9 @@
 import express from "express";
-import { test } from "../controllers/user.controller.js";
+import { updateProfilePicture } from "../controllers/user.controller.js";
 
 const router = express.Router();
-router.get("/test", test);
+
+// Update Profile Picture
+router.put("/profile-picture/:id", updateProfilePicture);
+
 export default router;

@@ -12,4 +12,12 @@ export default defineConfig({
     },
   },
   plugins: [react()],
+  optimizeDeps: {
+    include: ["@aws-sdk/client-s3"], // Pre-bundle the AWS SDK dependency
+  },
+  resolve: {
+    alias: {
+      // Add custom aliases if required
+    },
+  },
 });
