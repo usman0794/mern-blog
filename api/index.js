@@ -1,6 +1,7 @@
 import express from "express";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
+import cookieParser from "cookie-parser";
 
 // app.use('/static', express.static(path.join(__dirname, 'public')));
 
@@ -21,6 +22,7 @@ mongoose
 const app = express();
 
 app.use(express.json());
+app.use(cookieParser());
 
 app.listen(3000, () => {
   console.log("server is listening on port 3000");
