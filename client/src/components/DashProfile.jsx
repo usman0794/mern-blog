@@ -10,6 +10,7 @@ import {
   deleteUserStart,
   deleteUserSuccess,
   deleteUserFailure,
+  signoutSuccess,
 } from "../redux/user/userSlice";
 import { HiOutlineExclamationCircle } from "react-icons/hi";
 
@@ -124,25 +125,6 @@ export default function DashProfile() {
     await updateProfileInDB(imageUrl);
   };
 
-  // Handle user deletion
-  // const handleDeleteUser = async () => {
-  //   setShowModal(false);
-  //   try {
-  //     dispatch(deleteUserStart());
-  //     const res = await fetch(`/api/user/delete/${currentUser._id}`, {
-  //       method: "DELETE",
-  //     });
-  //     const data = await res.json();
-  //     if (!res.ok) {
-  //       dispatch(deleteUserFailure(data.message));
-  //     } else {
-  //       dispatch(deleteUserSuccess(data));
-  //     }
-  //   } catch (error) {
-  //     dispatch(deleteUserFailure(error.message));
-  //   }
-  // };
-
   const handleDeleteUser = async () => {
     setShowModal(false);
     try {
@@ -156,17 +138,36 @@ export default function DashProfile() {
       const data = await res.json();
       if (!res.ok) {
         dispatch(deleteUserFailure(data.message));
-        console.error('Failed to delete user:', data.message);
+        console.error("Failed to delete user:", data.message);
       } else {
         dispatch(deleteUserSuccess(data));
-        console.log('User deleted successfully:', data);
+        console.log("User deleted successfully:", data);
       }
     } catch (error) {
       dispatch(deleteUserFailure(error.message));
-      console.error('Error deleting user:', error.message);
+      console.error("Error deleting user:", error.message);
     }
   };
-  
+
+  // handle signout
+
+  const handleSignout = async () => {
+    try {
+      const res = await fetch("/api/user/signout", {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        console.error("Signout failed:", data.message);
+      } else {
+        dispatch(signoutSuccess());
+        //console.log("Signout successful");
+      }
+    } catch (error) {
+      console.error("Error during signout:", error.message);
+    }
+  };
+
   return (
     <div className="max-w-lg mx-auto p-3 w-full">
       <h1 className="my-7 text-center font-semibold text-3xl">Profile</h1>
@@ -224,7 +225,9 @@ export default function DashProfile() {
         <span className="cursor-pointer" onClick={() => setShowModal(true)}>
           Delete Account
         </span>
-        <span className="cursor-pointer">Sign out</span>
+        <span className="cursor-pointer" onClick={handleSignout}>
+          Sign out
+        </span>
       </div>
       <Modal
         show={showModal}
