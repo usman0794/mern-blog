@@ -2,6 +2,7 @@ import { Button, TextInput } from "flowbite-react";
 import { useRef, useState } from "react";
 import { useSelector } from "react-redux";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import axios from "axios"; // Axios for backend communication
 
 export default function DashProfile() {
   const currentUser = useSelector((state) => state.user);
@@ -35,7 +36,7 @@ export default function DashProfile() {
   const uploadImageToS3 = async () => {
     if (!imageFile) {
       setUploadStatus("No image selected!");
-      return;
+      return null;
     }
 
     const key = `profile-pictures/${currentUser.id}-${Date.now()}-${imageFile.name}`;
@@ -55,11 +56,34 @@ export default function DashProfile() {
       const imageUrl = `https://${bucketName}.s3.${import.meta.env.VITE_AWS_REGION}.amazonaws.com/${key}`;
       console.log("Image URL:", imageUrl);
 
-      setImageFileUrl(imageUrl); // Update the preview URL with the S3 image URL
       setUploadStatus("Image uploaded successfully!");
+      return imageUrl;
     } catch (error) {
       console.error("Error uploading image:", error);
       setUploadStatus("Error uploading image!");
+      return null;
+    }
+  };
+
+  // Update user profile in the database
+  const updateProfileInDB = async (imageUrl) => {
+    try {
+      const response = await axios.put(
+        `${import.meta.env.VITE_BACKEND_URL}/users/${currentUser.id}`,
+        {
+          profilePicture: imageUrl,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${currentUser.token}`,
+          },
+        }
+      );
+      console.log("Profile updated in DB:", response.data);
+      setUploadStatus("Profile updated successfully!");
+    } catch (error) {
+      console.error("Error updating profile in DB:", error);
+      setUploadStatus("Error updating profile in database!");
     }
   };
 
@@ -67,9 +91,15 @@ export default function DashProfile() {
   const handleFormSubmit = async (e) => {
     e.preventDefault();
 
+    let imageUrl = null;
+
     // Upload the image if a new file is selected
     if (imageFile) {
-      await uploadImageToS3();
+      imageUrl = await uploadImageToS3();
+    }
+
+    if (imageUrl) {
+      await updateProfileInDB(imageUrl);
     }
 
     // TODO: Update other user details (username, email, password) in your database
