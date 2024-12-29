@@ -1,15 +1,26 @@
 import { Button, TextInput } from "flowbite-react";
-import { useRef, useState } from "react";
-import { useSelector } from "react-redux";
+import { useRef, useState, useEffect } from "react";
+import { useSelector, useDispatch } from "react-redux";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
-import axios from "axios"; // Axios for backend communication
+import axios from "axios";
+import {
+  updateStart,
+  updateSuccess,
+  updateFailure,
+} from "../redux/user/userSlice";
 
 export default function DashProfile() {
   const currentUser = useSelector((state) => state.user);
   const [imageFile, setImageFile] = useState(null);
   const [imageFileUrl, setImageFileUrl] = useState(null);
   const [uploadStatus, setUploadStatus] = useState(""); // To track upload status
+  const [formData, setFormData] = useState({
+    username: currentUser?.username || "",
+    email: currentUser?.email || "",
+    password: "", // Password intentionally left blank
+  });
   const filePickerRef = useRef(null);
+  const dispatch = useDispatch();
 
   // AWS S3 Configuration
   const s3Client = new S3Client({
@@ -19,8 +30,12 @@ export default function DashProfile() {
       secretAccessKey: import.meta.env.VITE_AWS_SECRET_ACCESS_KEY,
     },
   });
-
   const bucketName = import.meta.env.VITE_S3_BUCKET_NAME;
+
+  // Handle form input changes
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.id]: e.target.value });
+  };
 
   // Handle image file change
   const handleImageChange = (e) => {
@@ -39,21 +54,24 @@ export default function DashProfile() {
       return null;
     }
 
-    const key = `profile-pictures/${currentUser.id}-${Date.now()}-${imageFile.name}`;
-
+    const key = `profile-pictures/${currentUser.id}-${Date.now()}-${
+      imageFile.name
+    }`;
     const params = {
       Bucket: bucketName,
       Key: key,
       Body: imageFile,
       ContentType: imageFile.type,
     };
-    
+
     try {
       const command = new PutObjectCommand(params);
       await s3Client.send(command);
 
-      // Construct the image URL from the S3 bucket
-      const imageUrl = `https://${bucketName}.s3.${import.meta.env.VITE_AWS_REGION}.amazonaws.com/${key}`;
+      // Construct the image URL
+      const imageUrl = `https://${bucketName}.s3.${
+        import.meta.env.VITE_AWS_REGION
+      }.amazonaws.com/${key}`;
       console.log("Image URL:", imageUrl);
 
       setUploadStatus("Image uploaded successfully!");
@@ -65,23 +83,28 @@ export default function DashProfile() {
     }
   };
 
-  // Update user profile in the database
+  // Update profile in the database
   const updateProfileInDB = async (imageUrl) => {
     try {
+      const payload = {
+        ...formData,
+        profilePicture: imageUrl || currentUser.profilePicture, // Only update the image URL if a new one is uploaded
+      };
+
       const response = await axios.put(
         `${import.meta.env.VITE_BACKEND_URL}/users/${currentUser.id}`,
-        {
-          profilePicture: imageUrl,
-        },
+        payload,
         {
           headers: {
             Authorization: `Bearer ${currentUser.token}`,
           },
         }
       );
+      dispatch(updateSuccess(response.data));
       console.log("Profile updated in DB:", response.data);
       setUploadStatus("Profile updated successfully!");
     } catch (error) {
+      dispatch(updateFailure(error));
       console.error("Error updating profile in DB:", error);
       setUploadStatus("Error updating profile in database!");
     }
@@ -90,7 +113,7 @@ export default function DashProfile() {
   // Handle form submission
   const handleFormSubmit = async (e) => {
     e.preventDefault();
-
+    dispatch(updateStart());
     let imageUrl = null;
 
     // Upload the image if a new file is selected
@@ -98,12 +121,8 @@ export default function DashProfile() {
       imageUrl = await uploadImageToS3();
     }
 
-    if (imageUrl) {
-      await updateProfileInDB(imageUrl);
-    }
-
-    // TODO: Update other user details (username, email, password) in your database
-    console.log("Form submitted with updated details");
+    // Update the profile in the database with the image URL (if new image is uploaded)
+    await updateProfileInDB(imageUrl);
   };
 
   return (
@@ -123,9 +142,10 @@ export default function DashProfile() {
             filePickerRef.current.click();
           }}
         >
-          {/* Show preview image or the current user's profile image */}
           <img
-            src={imageFileUrl || currentUser.profilePicture || "default-image-url"} // Provide default image if none
+            src={
+              imageFileUrl || currentUser.profilePicture || "default-image-url"
+            }
             alt="user"
             className="rounded-full w-full h-full object-cover border-8 border-[lightgray]"
           />
@@ -134,20 +154,30 @@ export default function DashProfile() {
           type="text"
           id="username"
           placeholder="Username"
-          defaultValue={currentUser.username}
+          value={formData.username}
+          onChange={handleChange}
         />
         <TextInput
           type="email"
           id="email"
           placeholder="Email"
-          defaultValue={currentUser.email}
+          value={formData.email}
+          onChange={handleChange}
         />
-        <TextInput type="password" id="password" placeholder="********" />
+        <TextInput
+          type="password"
+          id="password"
+          placeholder="********"
+          value={formData.password}
+          onChange={handleChange}
+        />
         <Button type="submit" gradientDuoTone="purpleToBlue" outline>
           Update
         </Button>
       </form>
-      {uploadStatus && <p className="mt-3 text-center text-red-500">{uploadStatus}</p>}
+      {uploadStatus && (
+        <p className="mt-3 text-center text-red-500">{uploadStatus}</p>
+      )}
       <div className="text-red-600 flex justify-between mt-5">
         <span className="cursor-pointer">Delete Account</span>
         <span className="cursor-pointer">Sign out</span>
