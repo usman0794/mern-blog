@@ -7,7 +7,7 @@ import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 export default function CreatePost() {
   const [file, setFile] = useState(null);
   const [uploadStatus, setUploadStatus] = useState("");
-  const [imageUrl, setImageUrl] = useState(""); // Add state to store uploaded image URL
+  const [imageUrl, setImageUrl] = useState(""); // State to store uploaded image URL
 
   // AWS S3 Configuration
   const s3Client = new S3Client({
@@ -37,57 +37,99 @@ export default function CreatePost() {
       const command = new PutObjectCommand(params);
       await s3Client.send(command);
 
-      // Construct the image URL
       const uploadedImageUrl = `https://${bucketName}.s3.${
         import.meta.env.VITE_AWS_REGION
       }.amazonaws.com/${key}`;
-      setImageUrl(uploadedImageUrl); // Store the image URL in state
+      setImageUrl(uploadedImageUrl); // Store the image URL
       setUploadStatus("Image uploaded successfully!");
     } catch (error) {
-      console.error("Error uploading image:", error);
-      setUploadStatus("Error uploading image!");
+      console.error("S3 Upload Error:", error);
+      setUploadStatus(`Error: ${error.message}`);
     }
   };
 
+  // const handleSubmit = async (e) => {
+  //   e.preventDefault();
+
+  //   const formData = new FormData();
+  //   formData.append("title", document.getElementById("title").value);
+  //   formData.append("content", document.querySelector(".ql-editor").innerHTML);
+  //   formData.append("category", document.querySelector("select").value);
+
+  //   if (imageUrl) {
+  //     formData.append("image", imageUrl);
+  //   }
+
+  //   try {
+  //     const response = await fetch(
+  //       `${import.meta.env.VITE_BACKEND_URL}/posts`,
+  //       {
+  //         method: "POST",
+  //         headers: {
+  //           Authorization: `Bearer ${localStorage.getItem("token")}`,
+  //         },
+  //         body: formData,
+  //       }
+  //     );
+
+  //     if (response.ok) {
+  //       const data = await response.json();
+  //       alert("Post created successfully!");
+  //     } else {
+  //       const errorData = await response.json();
+  //       console.error("Error creating post:", errorData);
+  //       alert(`Failed to create post: ${errorData.message}`);
+  //     }
+  //   } catch (error) {
+  //     console.error("Form Submission Error:", error);
+  //     alert(`Error: ${error.message}`);
+  //   }
+  // };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-
+  
     const formData = new FormData();
     formData.append("title", document.getElementById("title").value);
     formData.append("content", document.querySelector(".ql-editor").innerHTML);
     formData.append("category", document.querySelector("select").value);
-
-    // Append the image URL if available
+  
     if (imageUrl) {
       formData.append("image", imageUrl);
     }
-
+  
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/posts`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-          body: formData,
-        }
-      );
-
-      if (response.ok) {
-        const data = await response.json();
-        alert("Post created successfully!");
-      } else {
-        const errorData = await response.json();
-        console.error("Error creating post:", errorData);
-        alert(`Failed to create post: ${errorData.message}`);
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/posts`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: formData,
+      });
+  
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Error response text:", errorText);
+        alert("Failed to create post: " + errorText);
+        return;
       }
+  
+      let data;
+      try {
+        data = await response.json();
+      } catch (error) {
+        console.error("JSON Parsing Error:", error);
+        alert("Response is not in JSON format.");
+        return;
+      }
+  
+      alert("Post created successfully!");
     } catch (error) {
-      console.error("Error submitting form:", error);
-      alert("An error occurred while submitting the form.");
+      console.error("Form Submission Error:", error);
+      alert(`Error: ${error.message}`);
     }
   };
-
+  
   return (
     <div className="p-3 max-w-3xl mx-auto min-h-screen">
       <h1 className="text-center text-3xl my-7 font-semibold">Create a Post</h1>
@@ -141,7 +183,13 @@ export default function CreatePost() {
           Publish
         </Button>
         {uploadStatus && (
-          <p className="mt-3 text-center text-red-500">{uploadStatus}</p>
+          <p
+            className={`mt-3 text-center ${
+              uploadStatus.includes("Error") ? "text-red-500" : "text-green-500"
+            }`}
+          >
+            {uploadStatus}
+          </p>
         )}
       </form>
     </div>

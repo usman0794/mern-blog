@@ -12,7 +12,10 @@ const s3Client = new S3Client({
 });
 const bucketName = process.env.S3_BUCKET_NAME;
 
+
+
 export const create = async (req, res, next) => {
+  console.log("Request Body:", req.body);
   if (!req.user.isAdmin) {
     return next(errorHandler("403", "You are not allowed to create a post"));
   }

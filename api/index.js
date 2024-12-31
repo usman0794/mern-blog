@@ -2,6 +2,7 @@ import express from "express";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
+import multer from "multer";
 
 import userRoutes from "./routes/user.route.js";
 import authRoutes from "./routes/auth.route.js";
@@ -20,9 +21,11 @@ mongoose
   });
 
 const app = express();
+const upload = multer();
 
 app.use(express.json());
 app.use(cookieParser());
+app.use(upload.any());
 
 app.listen(3000, () => {
   console.log("server is listening on port 3000");
