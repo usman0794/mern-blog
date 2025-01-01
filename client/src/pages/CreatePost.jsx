@@ -58,16 +58,22 @@ export default function CreatePost() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    console.log("Submitting form data:", formData);
+    // console.log("Submitting form data:", formData);
+    const completeFormData = { ...formData, imageUrl };
+
+    console.log("Submitting form data:", completeFormData);
 
     try {
-      const res = await fetch("http://localhost:3000/api/post/create", {
+      const res = await fetch("http://localhost:5000/api/post/create", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(formData),
       });
+
+      console.log("Response status:", res.status);
+      console.log("Response body:", await res.text());
 
       const data = await res.json();
 
