@@ -1,13 +1,17 @@
-import { Button, FileInput, Select, TextInput } from "flowbite-react";
+import { Alert, Button, FileInput, Select, TextInput } from "flowbite-react";
 import React, { useState } from "react";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { useNavigate } from "react-router-dom";
 
 export default function CreatePost() {
   const [file, setFile] = useState(null);
   const [uploadStatus, setUploadStatus] = useState("");
   const [imageUrl, setImageUrl] = useState(""); // State to store uploaded image URL
+  const [formData, setFormData] = useState({});
+  const [publishError, setPublishError] = useState("");
+  const navigate = useNavigate();
 
   // AWS S3 Configuration
   const s3Client = new S3Client({
@@ -40,6 +44,9 @@ export default function CreatePost() {
       const uploadedImageUrl = `https://${bucketName}.s3.${
         import.meta.env.VITE_AWS_REGION
       }.amazonaws.com/${key}`;
+
+      console.log("Uploaded Image URL:", uploadedImageUrl); // Display the URL in the console
+
       setImageUrl(uploadedImageUrl); // Store the image URL
       setUploadStatus("Image uploaded successfully!");
     } catch (error) {
@@ -48,88 +55,37 @@ export default function CreatePost() {
     }
   };
 
-  // const handleSubmit = async (e) => {
-  //   e.preventDefault();
-
-  //   const formData = new FormData();
-  //   formData.append("title", document.getElementById("title").value);
-  //   formData.append("content", document.querySelector(".ql-editor").innerHTML);
-  //   formData.append("category", document.querySelector("select").value);
-
-  //   if (imageUrl) {
-  //     formData.append("image", imageUrl);
-  //   }
-
-  //   try {
-  //     const response = await fetch(
-  //       `${import.meta.env.VITE_BACKEND_URL}/posts`,
-  //       {
-  //         method: "POST",
-  //         headers: {
-  //           Authorization: `Bearer ${localStorage.getItem("token")}`,
-  //         },
-  //         body: formData,
-  //       }
-  //     );
-
-  //     if (response.ok) {
-  //       const data = await response.json();
-  //       alert("Post created successfully!");
-  //     } else {
-  //       const errorData = await response.json();
-  //       console.error("Error creating post:", errorData);
-  //       alert(`Failed to create post: ${errorData.message}`);
-  //     }
-  //   } catch (error) {
-  //     console.error("Form Submission Error:", error);
-  //     alert(`Error: ${error.message}`);
-  //   }
-  // };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-  
-    const formData = new FormData();
-    formData.append("title", document.getElementById("title").value);
-    formData.append("content", document.querySelector(".ql-editor").innerHTML);
-    formData.append("category", document.querySelector("select").value);
-  
-    if (imageUrl) {
-      formData.append("image", imageUrl);
-    }
-  
+
+    console.log("Submitting form data:", formData);
+
     try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/posts`, {
+      const res = await fetch("http://localhost:3000/api/post/create", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          "Content-Type": "application/json",
         },
-        body: formData,
+        body: JSON.stringify(formData),
       });
-  
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Error response text:", errorText);
-        alert("Failed to create post: " + errorText);
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        const errorMessage = data.message || "Unknown error occurred.";
+        setPublishError(errorMessage);
         return;
       }
-  
-      let data;
-      try {
-        data = await response.json();
-      } catch (error) {
-        console.error("JSON Parsing Error:", error);
-        alert("Response is not in JSON format.");
-        return;
-      }
-  
+
+      setPublishError(null);
       alert("Post created successfully!");
+      navigate(`/post/${data.slug}`);
     } catch (error) {
-      console.error("Form Submission Error:", error);
-      alert(`Error: ${error.message}`);
+      console.error("Error creating post:", error);
+      setPublishError("Something went wrong. Please try again later.");
     }
   };
-  
+
   return (
     <div className="p-3 max-w-3xl mx-auto min-h-screen">
       <h1 className="text-center text-3xl my-7 font-semibold">Create a Post</h1>
@@ -141,8 +97,15 @@ export default function CreatePost() {
             required
             id="title"
             className="flex-1"
+            onChange={(e) => {
+              setFormData({ ...formData, title: e.target.value });
+            }}
           />
-          <Select>
+          <Select
+            onChange={(e) => {
+              setFormData({ ...formData, category: e.target.value });
+            }}
+          >
             <option value="uncategorized">Select a Category</option>
             <option value="javascript">JavaScript</option>
             <option value="reactjs">React.js</option>
@@ -178,18 +141,20 @@ export default function CreatePost() {
           placeholder="Write something..."
           className="h-72 mb-12"
           required
+          onChange={(value) => {
+            setFormData({
+              ...formData,
+              content: value,
+            });
+          }}
         />
         <Button type="submit" gradientDuoTone="purpleToPink">
           Publish
         </Button>
-        {uploadStatus && (
-          <p
-            className={`mt-3 text-center ${
-              uploadStatus.includes("Error") ? "text-red-500" : "text-green-500"
-            }`}
-          >
-            {uploadStatus}
-          </p>
+        {publishError && (
+          <Alert className="mt-5" color="failure">
+            {publishError}
+          </Alert>
         )}
       </form>
     </div>
