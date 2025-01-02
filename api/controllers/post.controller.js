@@ -24,7 +24,6 @@ export const create = async (req, res, next) => {
 
   let imageUrl = image || null;
 
-  // Handle file upload to S3 if a file is provided (in case it's not a URL)
   if (req.file) {
     const file = req.file;
     const key = `posts/${Date.now()}-${file.originalname}`;
