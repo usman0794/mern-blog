@@ -2,16 +2,7 @@ import Post from "../models/post.model.js";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { errorHandler } from "../utils/error.js";
 
-// AWS S3 Configuration
-const s3Client = new S3Client({
-  region: process.env.AWS_REGION,
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-  },
-});
-const bucketName = process.env.S3_BUCKET_NAME;
-
+// create post controller
 export const create = async (req, res, next) => {
   console.log("Request Body:", req.body);
   if (!req.user.isAdmin) {
@@ -56,7 +47,7 @@ export const create = async (req, res, next) => {
     }
   }
 
-  // Create the post
+  // Create the post controller
   const newPost = new Post({
     userId: req.user.id,
     title,
@@ -65,7 +56,6 @@ export const create = async (req, res, next) => {
     category: category || "uncategorized",
     slug,
   });
-
   try {
     const savedPost = await newPost.save();
     res.status(201).json(savedPost);
@@ -74,6 +64,7 @@ export const create = async (req, res, next) => {
   }
 };
 
+// getposts controller
 export const getposts = async (req, res, next) => {
   try {
     const startIndex = parseInt(req.query.startIndex) || 0;
@@ -114,6 +105,23 @@ export const getposts = async (req, res, next) => {
       totalPosts,
       lastMonthPosts,
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// deletepost controller
+export const deletepost = async (req, res) => {
+  if (!req.user.isAdmin || req.user.id !== req.params.userId) {
+    return next(errorHandler("403", "You are not allowed to delete a post"));
+  }
+  try {
+    const post = await Post.findById(req.params.postId);
+    if (!post) {
+      return next(errorHandler("404", "Post not found"));
+    }
+    await post.delete();
+    res.status(200).json("Post has been deleted");
   } catch (error) {
     next(error);
   }

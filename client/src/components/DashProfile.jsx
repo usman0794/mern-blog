@@ -125,7 +125,7 @@ export default function DashProfile() {
     }
     await updateProfileInDB(imageUrl);
   };
-
+  // handle delete user
   const handleDeleteUser = async () => {
     setShowModal(false);
     try {
@@ -149,9 +149,7 @@ export default function DashProfile() {
       console.error("Error deleting user:", error.message);
     }
   };
-
   // handle signout
-
   const handleSignout = async () => {
     try {
       const res = await fetch("/api/user/signout", {
