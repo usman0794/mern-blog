@@ -1,5 +1,5 @@
 import Post from "../models/post.model.js";
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { errorHandler } from "../utils/error.js";
 
 // create post controller
@@ -22,7 +22,7 @@ export const create = async (req, res, next) => {
     .toLowerCase()
     .replace(/[^a-zA-Z0-9-]/g, "");
 
-  let imageUrl = image || null;
+  const imageUrl = image || null;
 
   if (req.file) {
     const file = req.file;
@@ -46,7 +46,7 @@ export const create = async (req, res, next) => {
     }
   }
 
-  // Create the post controller
+  // save post to database
   const newPost = new Post({
     userId: req.user.id,
     title,

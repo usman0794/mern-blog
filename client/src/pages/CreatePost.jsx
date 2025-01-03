@@ -8,7 +8,7 @@ import { useNavigate } from "react-router-dom";
 export default function CreatePost() {
   const [file, setFile] = useState(null);
   const [uploadStatus, setUploadStatus] = useState("");
-  const [imageUrl, setImageUrl] = useState(""); // State to store uploaded image URL
+  const [imageUrl, setImageUrl] = useState("");
   const [formData, setFormData] = useState({});
   const [publishError, setPublishError] = useState("");
   const navigate = useNavigate();
@@ -45,8 +45,6 @@ export default function CreatePost() {
         import.meta.env.VITE_AWS_REGION
       }.amazonaws.com/${key}`;
 
-      console.log("Uploaded Image URL:", uploadedImageUrl); // Display the URL in the console
-
       setImageUrl(uploadedImageUrl); // Store the image URL
       setUploadStatus("Image uploaded successfully!");
     } catch (error) {
@@ -56,13 +54,12 @@ export default function CreatePost() {
   };
 
   const handleSubmit = async (e) => {
-    alert("Submitting form data...");
     e.preventDefault();
 
     console.log("Submitting form data:", formData);
-    const completeFormData = { ...formData, imageUrl };
+    const completeFormData = { ...formData, image: imageUrl };
 
-    console.log("Submitting form data:", completeFormData);
+    // console.log("Submitting form data:", completeFormData);
 
     try {
       const res = await fetch("/api/post/create", {
@@ -74,7 +71,6 @@ export default function CreatePost() {
       });
 
       console.log("Response status:", res.status);
-      
 
       const data = await res.json();
 
@@ -83,7 +79,6 @@ export default function CreatePost() {
         const errorMessage = data.message || "Unknown error occurred.";
         setPublishError(errorMessage);
         return;
-
       }
 
       setPublishError(null);
