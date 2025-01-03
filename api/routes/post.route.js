@@ -10,7 +10,6 @@ import { uploadSingle } from "../middlewares/upload.js";
 const router = express.Router();
 
 router.post("/create", verifyToken, uploadSingle, create);
-router.post("/getposts", getposts);
-router.delete("/deletepost/:postId/:userId", verifyToken, deletepost);
-
+router.get("/getposts", getposts);
+router.delete('/deletepost/:postId/:userId', verifyToken, deletepost);
 export default router;

@@ -56,7 +56,6 @@ export default function CreatePost() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    console.log("Submitting form data:", formData);
     const completeFormData = { ...formData, image: imageUrl };
 
     // console.log("Submitting form data:", completeFormData);
@@ -69,8 +68,6 @@ export default function CreatePost() {
         },
         body: JSON.stringify(completeFormData),
       });
-
-      console.log("Response status:", res.status);
 
       const data = await res.json();
 
@@ -114,6 +111,7 @@ export default function CreatePost() {
             <option value="javascript">JavaScript</option>
             <option value="reactjs">React.js</option>
             <option value="nextjs">Next.js</option>
+            <option value="aws">AWS</option>
           </Select>
         </div>
         <div className="flex gap-4 items-center justify-between border-4 border-teal-500 border-dotted p-3">

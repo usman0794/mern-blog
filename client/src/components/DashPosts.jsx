@@ -16,8 +16,9 @@ export default function DashPosts() {
     const fetchPosts = async () => {
       try {
         const res = await fetch(`/api/post/getposts?userId=${currentUser._id}`);
+
         const data = await res.json();
-        // console.log(data);
+
         if (res.ok) {
           setUserPosts(data.posts);
           if (data.posts.length < 9) {
@@ -64,7 +65,7 @@ export default function DashPosts() {
       );
       const data = await res.json();
       if (!res.ok) {
-        console.error("Failed to delete post:", data.message);
+        console.log(data.message);
       } else {
         setUserPosts((prev) =>
           prev.filter((post) => post._id !== postIdToDelete)
@@ -93,7 +94,7 @@ export default function DashPosts() {
             </Table.Head>
             {userPosts.map((post) => (
               <Table.Body className="divide-y">
-                <Table.row className="bg-white dark:border-gray-700 dark:bg-gray-800">
+                <Table.Row className="bg-white dark:border-gray-700 dark:bg-gray-800">
                   <Table.Cell>
                     {new Date(post.updatedAt).toLocaleDateString()}
                   </Table.Cell>
@@ -132,16 +133,18 @@ export default function DashPosts() {
                     />
                     <span>Edit</span>
                   </Table.Cell>
-                </Table.row>
+                </Table.Row>
               </Table.Body>
             ))}
           </Table>
-          showMore && (
-          <button onClick={handleShowMore}>
-            className="w-full text-teal-500 self-center text-sm py-7" onClick=
-            {() => setShowMore(true)} Show More
-          </button>
-          )
+          {showMore && (
+            <button
+              onClick={handleShowMore}
+              className="w-full text-teal-500 self-center text-sm py-7"
+            >
+              Show More
+            </button>
+          )}
         </>
       ) : (
         <p>You have no Post yet!</p>
