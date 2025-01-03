@@ -25,106 +25,117 @@ export default function DashProfile() {
   const filePickerRef = useRef(null);
   const dispatch = useDispatch();
 
-  // AWS S3 Configuration
-  const s3Client = new S3Client({
-    region: import.meta.env.VITE_AWS_REGION,
-    credentials: {
-      accessKeyId: import.meta.env.VITE_AWS_ACCESS_KEY_ID,
-      secretAccessKey: import.meta.env.VITE_AWS_SECRET_ACCESS_KEY,
-    },
-  });
-  const bucketName = import.meta.env.VITE_S3_BUCKET_NAME;
+// AWS S3 Configuration
+const s3Client = new S3Client({
+  region: import.meta.env.VITE_AWS_REGION,
+  credentials: {
+    accessKeyId: import.meta.env.VITE_AWS_ACCESS_KEY_ID,
+    secretAccessKey: import.meta.env.VITE_AWS_SECRET_ACCESS_KEY,
+  },
+});
+const bucketName = import.meta.env.VITE_S3_BUCKET_NAME;
 
-  // Handle form input changes
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.id]: e.target.value });
+// Handle form input changes
+const handleChange = (e) => {
+  setFormData({ ...formData, [e.target.id]: e.target.value });
+};
+
+// Handle image file change
+const handleImageChange = (e) => {
+  const file = e.target.files[0];
+  if (file) {
+    console.log("Selected file:", file);
+    setImageFile(file);
+    setImageFileUrl(URL.createObjectURL(file)); // Set preview URL for the selected image
+  } else {
+    console.warn("No file selected");
+    setImageFile(null);
+    setImageFileUrl(null);
+  }
+};
+
+// Upload image to S3
+const uploadImageToS3 = async () => {
+  if (!imageFile) {
+    console.warn("No image file selected for upload.");
+    setUploadStatus("No image selected!");
+    return null;
+  }
+
+  const key = `profile-pictures/${currentUser.id}-${Date.now()}-${imageFile.name}`;
+  const params = {
+    Bucket: bucketName,
+    Key: key,
+    Body: imageFile,
+    ContentType: imageFile.type,
   };
 
-  // Handle image file change
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      console.log("Selected file:", file);
-      setImageFile(file);
-      setImageFileUrl(URL.createObjectURL(file)); // Preview the selected image
-    }
-  };
+  try {
+    const command = new PutObjectCommand(params);
+    await s3Client.send(command);
 
-  // Upload image to S3
-  const uploadImageToS3 = async () => {
-    if (!imageFile) {
-      setUploadStatus("No image selected!");
-      return null;
-    }
+    // Construct the image URL
+    const imageUrl = `https://${bucketName}.s3.${import.meta.env.VITE_AWS_REGION}.amazonaws.com/${key}`;
+    console.log("Uploaded Image URL:", imageUrl);
+    setUploadStatus("Image uploaded successfully!");
+    return imageUrl;
+  } catch (error) {
+    console.error("Error uploading image to S3:", error.message);
+    setUploadStatus("Error uploading image!");
+    return null;
+  }
+};
 
-    const key = `profile-pictures/${currentUser.id}-${Date.now()}-${
-      imageFile.name
-    }`;
-    const params = {
-      Bucket: bucketName,
-      Key: key,
-      Body: imageFile,
-      ContentType: imageFile.type,
+// Update profile in the database
+const updateProfileInDB = async (imageUrl) => {
+  try {
+    const payload = {
+      ...formData,
+      profilePicture: imageUrl || currentUser.profilePicture, // Use the new or existing image URL
     };
 
-    try {
-      const command = new PutObjectCommand(params);
-      await s3Client.send(command);
+    const response = await axios.put(
+      `/api/user/update/${currentUser._id}`,
+      payload,
+      {
+        headers: {
+          Authorization: `Bearer ${currentUser.token}`,
+        },
+      }
+    );
 
-      // Construct the image URL
-      const imageUrl = `https://${bucketName}.s3.${
-        import.meta.env.VITE_AWS_REGION
-      }.amazonaws.com/${key}`;
-      console.log("Image URL:", imageUrl);
+    console.log("API Response:", response.data);
+    dispatch(updateSuccess(response.data));
+    setUploadStatus("Profile updated successfully!");
+  } catch (error) {
+    console.error("Error updating profile in database:", error.message);
+    dispatch(updateFailure(error.message));
+    setUploadStatus("Error updating profile in database!");
+  }
+};
 
-      setUploadStatus("Image uploaded successfully!");
-      return imageUrl;
-    } catch (error) {
-      console.error("Error uploading image:", error);
-      setUploadStatus("Error uploading image!");
-      return null;
+// Handle form submission
+const handleFormSubmit = async (e) => {
+  e.preventDefault();
+  console.log("Form Data on Submit:", formData);
+
+  dispatch(updateStart());
+  let imageUrl = null;
+
+  // Upload the image if a new file is selected
+  if (imageFile) {
+    imageUrl = await uploadImageToS3();
+    if (!imageUrl) {
+      console.error("Image upload failed. Aborting update.");
+      return; // Exit if image upload fails
     }
-  };
+  }
 
-  // Update profile in the database
-  const updateProfileInDB = async (imageUrl) => {
-    try {
-      const payload = {
-        ...formData,
-        profilePicture: imageUrl || currentUser.profilePicture, // Only update the image URL if a new one is uploaded
-      };
+  await updateProfileInDB(imageUrl);
+};
 
-      const response = await axios.put(
-        `${import.meta.env.VITE_BACKEND_URL}/users/${currentUser.id}`,
-        payload,
-        {
-          headers: {
-            Authorization: `Bearer ${currentUser.token}`,
-          },
-        }
-      );
-      dispatch(updateSuccess(response.data));
-      console.log("Profile updated in DB:", response.data);
-      setUploadStatus("Profile updated successfully!");
-    } catch (error) {
-      dispatch(updateFailure(error));
-      console.error("Error updating profile in DB:", error);
-      setUploadStatus("Error updating profile in database!");
-    }
-  };
 
-  // Handle form submission
-  const handleFormSubmit = async (e) => {
-    e.preventDefault();
-    dispatch(updateStart());
-    let imageUrl = null;
 
-    // Upload the image if a new file is selected
-    if (imageFile) {
-      imageUrl = await uploadImageToS3();
-    }
-    await updateProfileInDB(imageUrl);
-  };
   // handle delete user
   const handleDeleteUser = async () => {
     setShowModal(false);
@@ -149,6 +160,7 @@ export default function DashProfile() {
       console.error("Error deleting user:", error.message);
     }
   };
+
   // handle signout
   const handleSignout = async () => {
     try {
