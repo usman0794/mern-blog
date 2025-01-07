@@ -1,9 +1,10 @@
 import { Alert, Button, FileInput, Select, TextInput } from "flowbite-react";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { useNavigate, useParams } from "react-router-dom";
+import { useSelector } from "react-redux";
 
 export default function UpdatePost() {
   const [file, setFile] = useState(null);
@@ -11,35 +12,35 @@ export default function UpdatePost() {
   const [imageUrl, setImageUrl] = useState("");
   const [formData, setFormData] = useState({});
   const [publishError, setPublishError] = useState("");
-  const postId = useParams();
+  const [isUploading, setIsUploading] = useState(false);
+  const { postId } = useParams();
+
   const navigate = useNavigate();
 
+  const { currentUser } = useSelector((state) => state.user);
+
   useEffect(() => {
-    const fetchPost = async () => {
-      try {
+    try {
+      const fetchPost = async () => {
         const res = await fetch(`/api/post/getposts?postId=${postId}`);
         const data = await res.json();
-
         if (!res.ok) {
-          alert("Error fetching post data...");
+          console.log(data.message);
           setPublishError(data.message);
           return;
         }
+        if (res.ok) {
+          setPublishError(null);
+          setFormData(data.posts[0]);
+          setImageUrl(data.posts[0].image); // Set the image URL if present
+        }
+      };
 
-        setFormData({
-          title: data.title,
-          category: data.category,
-          content: data.content,
-        });
-        setImageUrl(data.image);
-      } catch (error) {
-        console.error("Error fetching post:", error);
-      }
-    };
-
-    fetchPost();
+      fetchPost();
+    } catch (error) {
+      console.log(error.message);
+    }
   }, [postId]);
-
   // AWS S3 Configuration
   const s3Client = new S3Client({
     region: import.meta.env.VITE_AWS_REGION,
@@ -56,7 +57,9 @@ export default function UpdatePost() {
       return;
     }
 
+    setIsUploading(true); // Start loading
     const key = `posts/images/${Date.now()}-${file.name}`;
+
     const params = {
       Bucket: bucketName,
       Key: key,
@@ -72,51 +75,48 @@ export default function UpdatePost() {
         import.meta.env.VITE_AWS_REGION
       }.amazonaws.com/${key}`;
 
-      setImageUrl(uploadedImageUrl); // Store the image URL
+      setImageUrl(uploadedImageUrl);
       setUploadStatus("Image uploaded successfully!");
     } catch (error) {
       console.error("S3 Upload Error:", error);
       setUploadStatus(`Error: ${error.message}`);
+    } finally {
+      setIsUploading(false); // Stop loading
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    const completeFormData = { ...formData, image: imageUrl };
-
-    // console.log("Submitting form data:", completeFormData);
-
     try {
-      const res = await fetch("/api/post/create", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(completeFormData),
-      });
-
+      const updatedFormData = { ...formData, image: imageUrl };
+      const res = await fetch(
+        `/api/post/updatepost/${formData._id}/${currentUser._id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(updatedFormData), // Send updatedFormData
+        }
+      );
       const data = await res.json();
-
       if (!res.ok) {
-        alert("Error form submit data...");
-        const errorMessage = data.message || "Unknown error occurred.";
-        setPublishError(errorMessage);
+        setPublishError(data.message);
         return;
       }
 
-      setPublishError(null);
-      alert("Post created successfully!");
-      navigate(`/post/${data.slug}`);
+      if (res.ok) {
+        setPublishError(null);
+        navigate(`/post/${data.slug}`);
+      }
     } catch (error) {
-      console.error("Error creating post:", error);
-      setPublishError("Something went wrong. Please try again later.");
+      setPublishError("Something went wrong");
     }
   };
 
   return (
     <div className="p-3 max-w-3xl mx-auto min-h-screen">
-      <h1 className="text-center text-3xl my-7 font-semibold">Create a Post</h1>
+      <h1 className="text-center text-3xl my-7 font-semibold">Update a Post</h1>
       <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
         <div className="flex flex-col gap-4 sm:flex-row justify-between">
           <TextInput
@@ -147,7 +147,7 @@ export default function UpdatePost() {
           <FileInput
             id="file"
             accept="image/*"
-            required
+            required={!imageUrl} // Only required if no image is already present
             onChange={(e) => setFile(e.target.files[0])}
           />
           <Button
@@ -156,10 +156,12 @@ export default function UpdatePost() {
             size="sm"
             outline
             onClick={handleUploadImage}
+            disabled={isUploading}
           >
-            Upload Image
+            {isUploading ? "Uploading..." : "Upload Image"}
           </Button>
         </div>
+        {/* Display existing or newly uploaded image */}
         {imageUrl && (
           <img
             src={imageUrl}
@@ -181,7 +183,7 @@ export default function UpdatePost() {
           }}
         />
         <Button type="submit" gradientDuoTone="purpleToPink">
-          Publish
+          Update Post
         </Button>
         {publishError && (
           <Alert className="mt-5" color="failure">

@@ -11,6 +11,8 @@ export default function CreatePost() {
   const [imageUrl, setImageUrl] = useState("");
   const [formData, setFormData] = useState({});
   const [publishError, setPublishError] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
+
   const navigate = useNavigate();
 
   // AWS S3 Configuration
@@ -29,7 +31,9 @@ export default function CreatePost() {
       return;
     }
 
+    setIsUploading(true); // Start loading
     const key = `posts/images/${Date.now()}-${file.name}`;
+
     const params = {
       Bucket: bucketName,
       Key: key,
@@ -45,11 +49,13 @@ export default function CreatePost() {
         import.meta.env.VITE_AWS_REGION
       }.amazonaws.com/${key}`;
 
-      setImageUrl(uploadedImageUrl); // Store the image URL
+      setImageUrl(uploadedImageUrl);
       setUploadStatus("Image uploaded successfully!");
     } catch (error) {
       console.error("S3 Upload Error:", error);
       setUploadStatus(`Error: ${error.message}`);
+    } finally {
+      setIsUploading(false); // Stop loading
     }
   };
 
@@ -127,8 +133,9 @@ export default function CreatePost() {
             size="sm"
             outline
             onClick={handleUploadImage}
+            disabled={isUploading}
           >
-            Upload Image
+            {isUploading ? "Uploading..." : "Upload Image"}
           </Button>
         </div>
         {imageUrl && (

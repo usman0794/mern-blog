@@ -91,7 +91,7 @@ export default function DashProfile() {
       const imageUrl = `https://${bucketName}.s3.${
         import.meta.env.VITE_AWS_REGION
       }.amazonaws.com/${key}`;
-      console.log("Uploaded Image URL:", imageUrl);
+      // console.log("Uploaded Image URL:", imageUrl);
       setUploadStatus("Image uploaded successfully!");
       return imageUrl;
     } catch (error) {
