@@ -234,7 +234,7 @@ export default function DashProfile() {
         <TextInput
           type="password"
           id="password"
-          placeholder="******"
+          placeholder="Password"
           value={formData.password}
           onChange={handleChange}
         />
