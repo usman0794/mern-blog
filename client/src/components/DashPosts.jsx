@@ -1,4 +1,4 @@
-import { Button, Modal, Table } from "flowbite-react";
+import { Button, Modal, Table, Spinner } from "flowbite-react";
 import React, { useState } from "react";
 import { useEffect } from "react";
 import { HiOutlineExclamationCircle } from "react-icons/hi";
@@ -11,12 +11,13 @@ export default function DashPosts() {
   const [showMore, setShowMore] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [postIdToDelete, setPostIdToDelete] = useState("");
+  const [isLoading, setIsLoading] = useState(false); // Loading state
 
   useEffect(() => {
     const fetchPosts = async () => {
+      setIsLoading(true);
       try {
         const res = await fetch(`/api/post/getposts?userId=${currentUser._id}`);
-
         const data = await res.json();
 
         if (res.ok) {
@@ -27,6 +28,8 @@ export default function DashPosts() {
         }
       } catch (error) {
         console.log(error.message);
+      } finally {
+        setIsLoading(false);
       }
     };
     if (currentUser.isAdmin) {
@@ -37,6 +40,7 @@ export default function DashPosts() {
   // handleShowMore
   const handleShowMore = async () => {
     const startIndex = userPosts.length;
+    setIsLoading(true);
     try {
       const res = await fetch(
         `/api/post/getposts?userId=${currentUser._id}&startIndex=${startIndex}`
@@ -50,12 +54,15 @@ export default function DashPosts() {
       }
     } catch (error) {
       console.log(error.message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   // handleDeletePost
   const handleDeletePost = async () => {
     setShowModal(false);
+    setIsLoading(true);
     try {
       const res = await fetch(
         `/api/post/deletepost/${postIdToDelete}/${currentUser._id}`,
@@ -73,14 +80,21 @@ export default function DashPosts() {
       }
     } catch (error) {
       console.log(error.message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
     <div className="table-auto overflow-x-scroll md:mx-auto p-3 scrollbar scrollbar-track-slate-100 scrollbar-thumb-slate-300 dark:scrollbar-track-slate-700 dark:scrollbar-thumb-slate-300">
+      {isLoading && (
+        <div className="flex justify-center items-center my-5">
+          <Spinner size="lg" aria-label="Loading posts" />
+        </div>
+      )}
       {currentUser.isAdmin && userPosts.length > 0 ? (
         <>
-          {/* Admin Table  */}
+          {/* Admin Table */}
           <Table hoverable className="shadow-md">
             <Table.Head>
               <Table.HeadCell>Date Updated</Table.HeadCell>
@@ -93,7 +107,7 @@ export default function DashPosts() {
               </Table.HeadCell>
             </Table.Head>
             {userPosts.map((post) => (
-              <Table.Body className="divide-y">
+              <Table.Body className="divide-y" key={post._id}>
                 <Table.Row className="bg-white dark:border-gray-700 dark:bg-gray-800">
                   <Table.Cell>
                     {new Date(post.updatedAt).toLocaleDateString()}
@@ -121,7 +135,7 @@ export default function DashPosts() {
                         setShowModal(true);
                         setPostIdToDelete(post._id);
                       }}
-                      className="font-medium text-red-500 hover: underline cursor-pointer"
+                      className="font-medium text-red-500 hover:underline cursor-pointer"
                     >
                       Delete
                     </span>
@@ -138,7 +152,7 @@ export default function DashPosts() {
               </Table.Body>
             ))}
           </Table>
-          {showMore && (
+          {showMore && !isLoading && (
             <button
               onClick={handleShowMore}
               className="w-full text-teal-500 self-center text-sm py-7"
@@ -148,7 +162,7 @@ export default function DashPosts() {
           )}
         </>
       ) : (
-        <p>You have no Post yet!</p>
+        <p>Loading...</p>
       )}
       <Modal
         show={showModal}

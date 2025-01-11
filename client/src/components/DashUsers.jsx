@@ -1,4 +1,4 @@
-import { Button, Modal, Table } from "flowbite-react";
+import { Button, Modal, Table, Spinner } from "flowbite-react";
 import React, { useState } from "react";
 import { useEffect } from "react";
 import { HiOutlineExclamationCircle } from "react-icons/hi";
@@ -7,16 +7,17 @@ import { FaCheck, FaTimes } from "react-icons/fa";
 
 export default function DashUsers() {
   const { currentUser } = useSelector((state) => state.user);
-  const [user, setUsers] = useState([]);
+  const [users, setUsers] = useState([]);
   const [showMore, setShowMore] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [userIdToDelete, setUserIdToDelete] = useState("");
+  const [isLoading, setIsLoading] = useState(false); // Loading state
 
   useEffect(() => {
     const fetchUsers = async () => {
+      setIsLoading(true);
       try {
         const res = await fetch(`/api/user/getusers`);
-
         const data = await res.json();
 
         if (res.ok) {
@@ -27,6 +28,8 @@ export default function DashUsers() {
         }
       } catch (error) {
         console.log(error.message);
+      } finally {
+        setIsLoading(false);
       }
     };
     if (currentUser.isAdmin) {
@@ -37,6 +40,7 @@ export default function DashUsers() {
   // handleShowMore
   const handleShowMore = async () => {
     const startIndex = users.length;
+    setIsLoading(true);
     try {
       const res = await fetch(`/api/user/getusers?startIndex=${startIndex}`);
       const data = await res.json();
@@ -48,11 +52,14 @@ export default function DashUsers() {
       }
     } catch (error) {
       console.log(error.message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // handleDeletePost
+  // handleDeleteUser
   const handleDeleteUser = async () => {
+    setIsLoading(true);
     try {
       const res = await fetch(`/api/user/delete/${userIdToDelete}`, {
         method: "DELETE",
@@ -61,20 +68,27 @@ export default function DashUsers() {
         setUsers((prev) => prev.filter((user) => user._id !== userIdToDelete));
         setShowModal(false);
       } else {
+        const data = await res.json();
         console.log(data.message);
       }
-      const data = await res.json();
     } catch (error) {
-      alert("An error occurred while deleting the user."); 
+      alert("An error occurred while deleting the user.");
       console.log(error.message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
     <div className="table-auto overflow-x-scroll md:mx-auto p-3 scrollbar scrollbar-track-slate-100 scrollbar-thumb-slate-300 dark:scrollbar-track-slate-700 dark:scrollbar-thumb-slate-300">
-      {currentUser.isAdmin && user.length > 0 ? (
+      {isLoading && (
+        <div className="flex justify-center items-center my-5">
+          <Spinner size="lg" aria-label="Loading data..." />
+        </div>
+      )}
+      {currentUser.isAdmin && users.length > 0 ? (
         <>
-          {/* Admin Table  */}
+          {/* Admin Table */}
           <Table hoverable className="shadow-md">
             <Table.Head>
               <Table.HeadCell>Date Created</Table.HeadCell>
@@ -84,7 +98,7 @@ export default function DashUsers() {
               <Table.HeadCell>Admin</Table.HeadCell>
               <Table.HeadCell>Delete</Table.HeadCell>
             </Table.Head>
-            {user.map((user) => (
+            {users.map((user) => (
               <Table.Body className="divide-y" key={user._id}>
                 <Table.Row className="bg-white dark:border-gray-700 dark:bg-gray-800">
                   <Table.Cell>
@@ -112,7 +126,7 @@ export default function DashUsers() {
                         setShowModal(true);
                         setUserIdToDelete(user._id);
                       }}
-                      className="font-medium text-red-500 hover: underline cursor-pointer"
+                      className="font-medium text-red-500 hover:underline cursor-pointer"
                     >
                       Delete
                     </span>
@@ -121,7 +135,7 @@ export default function DashUsers() {
               </Table.Body>
             ))}
           </Table>
-          {showMore && (
+          {showMore && !isLoading && (
             <button
               onClick={handleShowMore}
               className="w-full text-teal-500 self-center text-sm py-7"
@@ -131,7 +145,7 @@ export default function DashUsers() {
           )}
         </>
       ) : (
-        <p>You have no user yet!</p>
+        <p>Loading...</p>
       )}
       <Modal
         show={showModal}
