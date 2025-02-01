@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  client:
+    container_name: mern_blog_client
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"  # Map port 5173 on the host to port 5173 in the container
+    environment:
+      - NODE_ENV=development
+    volumes:
+      - ./client:/app  # Mount the client directory for hot-reloading
+      - /app/node_modules
+    depends_on:
+      - api  # Ensure the API service starts first
+
+  api:
+    container_name: mern_blog_api
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+    env_file:
+      - .env  # Load environment variables from .env file
+    volumes:
+      - ./api:/app
+      - /app/node_modules
+    depends_on:
+      - mongo
+
+  mongo:
+    container_name: mern_blog_mongo
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
+volumes:
+  mongo-data:

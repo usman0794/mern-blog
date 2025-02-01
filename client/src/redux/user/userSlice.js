@@ -1,5 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
-import { deleteUser } from "../../../../api/controllers/user.controller";
+import { deleteUser } from "../../api/controllers/user.controller";
 
 const initialState = {
   currentUser: null,
@@ -55,7 +55,6 @@ const userSlice = createSlice({
       state.error = null;
       state.loading = false;
     },
-
   },
 });
 
@@ -73,4 +72,3 @@ export const {
 } = userSlice.actions;
 
 export default userSlice.reducer;
-// export const userReducer = userSlice.reducer;

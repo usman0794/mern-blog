@@ -12,7 +12,7 @@ import postRoutes from "./routes/post.route.js";
 dotenv.config();
 
 mongoose
-  .connect(process.env.MONGODB_URL)
+  .connect(process.env.MONGO_URI)
   .then(() => {
     console.log("MongoDB is connected!");
   })
